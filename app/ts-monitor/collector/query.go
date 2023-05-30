@@ -65,9 +65,14 @@ type queryMetrics struct {
 }
 
 func NewQueryMetric(logger *logger.Logger, conf *config.MonitorQuery) *QueryMetric {
+	protocol := "http"
+	if conf.HTTPSEnabled {
+		protocol = "https"
+	}
+
 	return &QueryMetric{
 		done:   make(chan struct{}),
-		url:    fmt.Sprintf("http://%s/query", conf.HttpEndpoint),
+		url:    fmt.Sprintf("%s://%s/query", protocol, conf.HttpEndpoint),
 		conf:   conf,
 		Client: http.DefaultClient,
 		logger: logger,
@@ -104,7 +109,6 @@ func (q *QueryMetric) collect() {
 			return
 		}
 	}
-
 }
 
 func (q *QueryMetric) queryExecute(db, cmd string) ([]byte, error) {
@@ -114,10 +118,12 @@ func (q *QueryMetric) queryExecute(db, cmd string) ([]byte, error) {
 		params := url.Values{}
 		params.Add("db", db)
 		params.Add("q", cmd)
+
 		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s?%s", q.url, params.Encode()), nil)
 		headers := http.Header{}
 		headers.Add("Content-Type", "application/json")
 		req.Header = headers
+		req.SetBasicAuth(q.conf.Username, q.conf.Password)
 		resp, err := q.Client.Do(req)
 		if err == nil {
 			if resp.StatusCode == http.StatusOK {

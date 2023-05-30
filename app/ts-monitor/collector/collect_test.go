@@ -42,8 +42,9 @@ func Test_Collect_MetricFiles(t *testing.T) {
 		expect func(err error) error
 	}
 
-	var testCases = []TestCase{
-		{"report metric file ok",
+	testCases := []TestCase{
+		{
+			"report metric file ok",
 			func(r *http.Request) (*http.Response, error) {
 				resp := &http.Response{
 					StatusCode: http.StatusNoContent,
@@ -76,21 +77,12 @@ func Test_Collect_MetricFiles(t *testing.T) {
 	}
 
 	logger := logger.NewLogger(errno.ModuleUnknown)
-
 	for _, tt := range testCases {
 		coll := NewCollector(dir, "", "history.json", logger)
-		coll.Reporter = NewReportJob(config.DefaultMonitorAddress,
-			config.DefaultMonitorDatabase,
-			config.DefaultMonitorRP,
-			"",
-			"",
+		coll.Reporter = NewReportJob(logger,
+			config.NewTSMonitor(),
 			false,
-			config.DefaultMonitorRPDuration,
-			false,
-			false,
-			logger,
-			config.DefaultHistoryFile,
-		)
+			config.DefaultHistoryFile)
 
 		go func() {
 			time.AfterFunc(2*time.Second, func() {
@@ -134,8 +126,9 @@ func Test_Collect_ErrLogFiles(t *testing.T) {
 		expect func(err error) error
 	}
 
-	var testCases = []TestCase{
-		{"report error logs ok",
+	testCases := []TestCase{
+		{
+			"report error logs ok",
 			func(r *http.Request) (*http.Response, error) {
 				resp := &http.Response{
 					StatusCode: http.StatusNoContent,
@@ -154,7 +147,7 @@ func Test_Collect_ErrLogFiles(t *testing.T) {
 `
 	dir := t.TempDir()
 	sqlErrorLog := filepath.Join(dir, "sql.error-2022-04-12T08-52-01.698.log.gz")
-	sql, _ := os.OpenFile(sqlErrorLog, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0640)
+	sql, _ := os.OpenFile(sqlErrorLog, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o640)
 	gf := gzip.NewWriter(sql)
 	fw := bufio.NewWriter(gf)
 	fw.WriteString(data)
@@ -167,25 +160,17 @@ func Test_Collect_ErrLogFiles(t *testing.T) {
 {"level":"error","time":"2022-04-07T10:42:09.557+0800","caller":"logger/logger.go:37","msg":"RPC request failed.","error":"no connections available, node: 5, 127.0.0.2:8401","errno":"10621001","stack":"goroutine 293 [running]:\nruntime/debug.Stack(0x14346b0, 0x26, 0xc000681c38)\n\t/usr/local/go/src/runtime/debug/stack.go:24 +0x9f\ngithub.com/openGemini/openGemini/lib/errno.NewError(0xc0001d03e9, 0xc000681c38, 0x2, 0x2, 0x0, 0x0)\n\t/go/src/github.com/openGemini/openGemini/lib/errno/error.go:82 +0xca\ngithub.com/openGemini/openGemini/engine/executor/spdy/transport.newTransport(0xc000346620, 0x4, 0x15f8b70, 0xc0007661e0, 0x1a3185c5000, 0x419f38, 0x28, 0x1325000)\n\t/go/src/github.com/openGemini/openGemini/engine/executor/spdy/transport/transport.go:78 +0x385\ngithub.com/openGemini/openGemini/engine/executor/spdy/transport.NewTransport(0x5, 0xc0004bb604, 0x15f8b70, 0xc0007661e0, 0xc08bb1a22d1ad5fe, 0x25031d147, 0x20ccec0)\n\t/go/src/github.com/openGemini/openGemini/engine/executor/spdy/transport/transport.go:55 +0x7a\ngithub.com/openGemini/openGemini/engine/executor.(*RPCClient).sendRequest(0xc0007661e0, 0x0, 0x0)\n\t/go/src/github.com/openGemini/openGemini/engine/executor/rpc_client.go:168 +0x15a\ngithub.com/openGemini/openGemini/engine/executor.(*RPCClient).Run(0xc0007661e0, 0x0, 0x0)\n\t/go/src/github.com/openGemini/openGemini/engine/executor/rpc_client.go:146 +0x67\ngithub.com/openGemini/openGemini/engine/executor.(*RPCReaderTransform).Work(0xc000166900, 0x160bdb8, 0xc000237cc0, 0x0, 0x0)\n\t/go/src/github.com/openGemini/openGemini/engine/executor/rpc_transform.go:139 +0x278\ngithub.com/openGemini/openGemini/engine/executor.(*PipelineExecutor).Execute.func4(0x1619cc0, 0xc000166900)\n\t/go/src/github.com/openGemini/openGemini/engine/executor/pipeline_executor.go:212 +0xd1\ncreated by github.com/openGemini/openGemini/engine/executor.(*PipelineExecutor).Execute\n\t/go/src/github.com/openGemini/openGemini/engine/executor/pipeline_executor.go:217 +0x25e\n"}
 `
 	sqlCurrent := filepath.Join(dir, "sql.error.log")
-	sql, _ = os.OpenFile(sqlCurrent, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0640)
+	sql, _ = os.OpenFile(sqlCurrent, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o640)
 	sql.WriteString(data2)
 	sql.Close()
 
 	logger := logger.NewLogger(errno.ModuleUnknown)
 	for _, tt := range testCases {
 		coll := NewCollector("", dir, "history.json", logger)
-		coll.Reporter = NewReportJob(config.DefaultMonitorAddress,
-			config.DefaultMonitorDatabase,
-			config.DefaultMonitorRP,
-			"",
-			"",
+		coll.Reporter = NewReportJob(logger,
+			config.NewTSMonitor(),
 			false,
-			config.DefaultMonitorRPDuration,
-			false,
-			false,
-			logger,
-			filepath.Join(dir, config.DefaultHistoryFile),
-		)
+			filepath.Join(dir, config.DefaultHistoryFile))
 
 		go func() {
 			ticker := time.NewTicker(2 * time.Second)
@@ -230,5 +215,4 @@ func Test_Collect_ErrLogFiles(t *testing.T) {
 			}
 		})
 	}
-
 }

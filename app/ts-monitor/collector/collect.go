@@ -41,9 +41,7 @@ const (
 	monitorErrLog  = "monitor.error.log"
 )
 
-var (
-	muErrLogHistory sync.RWMutex // lock for logs/history.json
-)
+var muErrLogHistory sync.RWMutex // lock for logs/history.json
 
 type Collector struct {
 	metricPath    string
@@ -122,7 +120,7 @@ func (c *Collector) cleanErrLogHistory() {
 		}
 
 		muErrLogHistory.Lock()
-		fd, _ := os.OpenFile(path.Clean(c.errLogHistory), os.O_APPEND|os.O_RDWR, 0600)
+		fd, _ := os.OpenFile(path.Clean(c.errLogHistory), os.O_APPEND|os.O_RDWR, 0o600)
 		_ = fd.Truncate(0)
 		_, _ = fd.Seek(0, 0)
 		util.MustClose(fd)
@@ -270,7 +268,7 @@ func (c *Collector) scanErrLogFiles(hisErrLogs []string, currErrLogs []string) (
 func (c *Collector) handleHistoryErrLogs(filenames []string, goon bool) error {
 	var wg sync.WaitGroup
 
-	var muErr = sync.Mutex{}
+	muErr := sync.Mutex{}
 	errs := make([]error, 0)
 
 	for _, filename := range filenames {
@@ -339,7 +337,7 @@ func (c *Collector) handleCurrentErrLog(filename string) error {
 
 func (c *Collector) saveErrLogHistory(filename string) {
 	muErrLogHistory.Lock()
-	fd, _ := os.OpenFile(path.Clean(c.errLogHistory), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
+	fd, _ := os.OpenFile(path.Clean(c.errLogHistory), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o600)
 	defer util.MustClose(fd)
 	_, _ = fd.WriteString(fmt.Sprintf("%s\n", filename))
 	muErrLogHistory.Unlock()
